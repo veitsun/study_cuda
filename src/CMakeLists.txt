@@ -26,3 +26,4 @@
 # # target_link_libraries(main PRIVATE SUNWEI)
 
 add_executable(VectorAdd VectorAdd.cu)
+add_executable(VectorMatrix VectorMatrix.cu)
