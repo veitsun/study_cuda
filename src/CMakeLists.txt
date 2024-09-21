@@ -1,4 +1,20 @@
 
+# 定义宏
+macro(add_multiple_executables)
+    foreach(executable_name ${ARGN})
+        add_executable(${executable_name} ${executable_name}.cu)
+    endforeach()
+endmacro()
+
+# 调用宏
+add_multiple_executables(
+    VectorAdd
+    VectorMatrix
+    VectorMatrix_Outer
+    helloWorld
+)
+
+
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cpp )
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cu HELLOlib_src)
 
@@ -25,5 +41,8 @@
 
 # # target_link_libraries(main PRIVATE SUNWEI)
 
-add_executable(VectorAdd VectorAdd.cu)
-add_executable(VectorMatrix VectorMatrix.cu)
+# add_executable(VectorAdd VectorAdd.cu)
+# add_executable(VectorMatrix VectorMatrix.cu)
+# add_executable(VectorMatrixOuter VectorMatrix_Outer.cu)
+# add_executable(helloWorld helloWorld.cu)
+

@@ -2,10 +2,10 @@
 #define TLPI_HDR_H
 // 系统调用所需要的头文件
 
-#include <errno.h>
-#include <stdio.h>
+// #include <errno.h>
+// #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+// #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
