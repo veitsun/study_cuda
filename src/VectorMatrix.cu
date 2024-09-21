@@ -18,12 +18,10 @@ __global__ void VecMatrix(float *A, float *B, float *Num, int N) {
   __syncthreads(); // 等待所有线程完成计算
 
   if (threadIdx.x == 0) {
-    // for ()
-    *Num = 0;
+    // *Num = 0;
     for (int j = 0; j < N; j++) {
       *Num += sharedMem[j];
     }
-    printf("Device Num :%f\n", *Num);
   }
 
   __syncthreads();
@@ -38,17 +36,21 @@ int main() {
 
   // 在设备上分配GPU内存
   float *deviceA, *deviceB, *deviceNum;
+  // cudaMemset(deviceNum, 0, sizeof(float));
   cudaMalloc(&deviceA, N * sizeof(float));
   cudaMalloc(&deviceB, N * sizeof(float));
   cudaMalloc(&deviceNum, sizeof(float));
 
   // 将主机上的数据复制到设备上
-  cudaMemcpy(deviceA, HostA, N * sizeof(float), cudaMemcpyHostToDevice);
-  cudaMemcpy(deviceB, HostB, N * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy((void **)deviceA, HostA, N * sizeof(float),
+             cudaMemcpyHostToDevice);
+  // printf("%f\n", deviceA[0]);
+  cudaMemcpy((void **)deviceB, HostB, N * sizeof(float),
+             cudaMemcpyHostToDevice);
   cudaMemcpy(deviceNum, &HostNum, sizeof(float), cudaMemcpyHostToDevice);
 
   // 执行内核函数
-  VecMatrix<<<1, N>>>(deviceA, deviceB, deviceNum, N);
+  VecMatrix<<<1, N, N * sizeof(float)>>>(deviceA, deviceB, deviceNum, N);
 
   // 将设备上的数据复制到主机上
   cudaMemcpy(HostA, deviceA, N * sizeof(float), cudaMemcpyDeviceToHost);
@@ -71,6 +73,9 @@ int main() {
 
   // 从主机上输出结果
   cout << HostNum << endl;
+  cudaFree(deviceA);
+  cudaFree(deviceB);
+  cudaFree(deviceNum);
 
   return 0;
 }
