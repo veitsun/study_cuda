@@ -51,18 +51,16 @@ void printMatrix(float *matrix, int size, int nx, int ny) {
   printf("\n\n");
 }
 
-// __global__ void MulMatrixOnDevice(float *A, float *B, float *C, int nx,
-//                                   int ny) {}
-
 __global__ void MulMatrixOnDevice(int M, int N, int K, float alpha, float *A,
                                   float *B, float beta, float *C) {
   int row = blockIdx.y * blockDim.y + threadIdx.y;
   int col = blockIdx.x * blockDim.x + threadIdx.x;
-
+  // printf("%f %f\n", A[row * N + k] , B[k * N + col])
   if (row < M && col < N) {
     float temp = 0.0;
     for (int k = 0; k < K; k++) {
-      temp += A[row * K + k] * B[k * N + col];
+      temp += A[row * N + k] * B[k * N + col];
+      // printf("%f %f\n", A[row * N + k], B[k * N + col]);
     }
     C[row * N + col] = alpha * temp + beta * C[row * N + col];
   }
@@ -75,8 +73,8 @@ int main(int argc, char **argv) {
   float *hostRef;
   float *gpuRef;
 
-  int nx = 8;
-  int ny = 8;
+  int nx = 1280;
+  int ny = 1280;
   int elemNum = nx * ny;
 
   // 给主机上的三个矩阵分配内存
@@ -94,9 +92,9 @@ int main(int argc, char **argv) {
   memset(gpuRef, 0, elemNum * sizeof(float));
 
   // 测试主机上的三个矩阵是否已经被初始化数据
-  printMatrix(hostA, elemNum, nx, ny);
-  printMatrix(hostB, elemNum, nx, ny);
-  printMatrix(hostC, elemNum, nx, ny);
+  // printMatrix(hostA, elemNum, nx, ny);
+  // printMatrix(hostB, elemNum, nx, ny);
+  // printMatrix(hostC, elemNum, nx, ny);
 
   double iStart, iElaps;
 
@@ -107,12 +105,16 @@ int main(int argc, char **argv) {
   iStart = seconds();
   girl.solveProblem(nx, nx, nx, alpha, hostA, hostB, beta, hostC, hostRef);
   iElaps = seconds();
+  // girl.print(hostRef, elemNum); // 测试输出hostdef
   printf("MulMatrixOnHost Time elapsed %f sec\n", iElaps - iStart);
 
   // 使用cuda kernel 来执行矩阵乘法
-  int blockSize = 64;
-  dim3 block(blockSize);
-  dim3 grid((elemNum + block.x - 1) / block.x);
+  dim3 blockDim(elemNum / 8, elemNum / 8);
+  dim3 gridDim(8, 8);
+
+  // dim3 blockDim(16, 16);
+  // dim3 gridDim((ny + blockDim.x - 1) / blockDim.x,
+  //              (nx + blockDim.y - 1) / blockDim.y);
 
   float *deviceA;
   float *deviceB;
@@ -127,15 +129,17 @@ int main(int argc, char **argv) {
   CHECK(cudaMemcpy(deviceC, hostC, elemNum * sizeof(float),
                    cudaMemcpyHostToDevice));
   iStart = seconds();
-  MulMatrixOnDevice<<<block, grid>>>(nx, nx, nx, alpha, deviceA, deviceB, beta,
-                                     deviceC);
+  MulMatrixOnDevice<<<gridDim, blockDim>>>(nx, nx, nx, alpha, deviceA, deviceB,
+                                           beta, deviceC);
   iElaps = seconds();
+  // girl.print(gpuRef, elemNum);
   printf("MulMatrixOnDevice Time elapsed %f sec\n", iElaps - iStart);
   CHECK(cudaMemcpy(gpuRef, deviceC, elemNum * sizeof(float),
                    cudaMemcpyDeviceToHost));
-
+  // girl.print(hostRef, elemNum);
+  // girl.print(gpuRef, elemNum);
   checkResult(hostRef, gpuRef, elemNum);
-
+  CHECK(cudaDeviceSynchronize());
   // 使用cublas 执行矩阵乘法
   return 0;
 }
