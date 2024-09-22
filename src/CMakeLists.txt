@@ -12,8 +12,10 @@ add_multiple_executables(
     VectorMatrix
     VectorMatrix_Outer
     helloWorld
+    MatrixMul
 )
-
+add_library(CGemmWithC STATIC CGemmWithC.cpp)
+target_link_libraries(MatrixMul PRIVATE CGemmWithC)
 
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cpp )
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cu HELLOlib_src)
