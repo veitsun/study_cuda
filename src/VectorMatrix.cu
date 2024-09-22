@@ -16,12 +16,15 @@ __global__ void VecMatrix(float *A, float *B, float *Num, int N) {
   if (i < N)
     sharedMem[i] = A[i] * B[i];
   __syncthreads(); // 等待所有线程完成计算
-
+  printf("threadIdx.x : %d\n", i);
   if (threadIdx.x == 0) {
     // *Num = 0;
     for (int j = 0; j < N; j++) {
       *Num += sharedMem[j];
-    }
+      printf("sharedMem %f ", sharedMem[j]);
+      printf("*Num =  %f ", *Num);
+    } 
+    printf("\n");
   }
 
   __syncthreads();
@@ -73,9 +76,11 @@ int main() {
 
   // 从主机上输出结果
   cout << HostNum << endl;
+  cudaDeviceSynchronize();
   cudaFree(deviceA);
   cudaFree(deviceB);
   cudaFree(deviceNum);
+  
 
   return 0;
 }
