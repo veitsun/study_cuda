@@ -3,6 +3,7 @@
 // #include "../include/mycuda.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <cublas_v2.h>
 #include <iostream>
@@ -71,7 +72,38 @@ __global__ void MulMatrixOnDevice(int M, int N, int K, float alpha, float *A,
 
 // ---------------------------------------------------------------------------cublas
 void matMult_cublas(int M, int N, int K, float alpha, float *A, float *B,
-                    float beta, float *C) {}
+                    float beta, float *C, cublasHandle_t cuHandle,
+                    float *cublasRef, const int elemNum) {
+  float *cublasdeviceA;
+  float *cublasdeviceB;
+  float *cublasdeviceC;
+  double iStart, iElaps;
+  // 在显存中为计算矩阵开辟空间
+  CHECK(cudaMalloc((void **)&cublasdeviceA, elemNum * sizeof(float)));
+  CHECK(cudaMalloc((void **)&cublasdeviceB, elemNum * sizeof(float)));
+  CHECK(cudaMalloc((void **)&cublasdeviceC, elemNum * sizeof(float)));
+
+  // 将主机上的数据拷贝到设备中
+
+  cublasSetVector(elemNum, sizeof(float), A, 1, cublasdeviceA, 1);
+  cublasSetVector(elemNum, sizeof(float), B, 1, cublasdeviceB, 1);
+  cublasSetVector(elemNum, sizeof(float), C, 1, cublasdeviceC, 1);
+
+  // 传递矩阵相乘中的参数，并执行内核函数，矩阵相乘
+  float a = 1;
+  float b = 0;
+  iStart = seconds();
+  cublasSgemm(cuHandle, CUBLAS_OP_T, CUBLAS_OP_T, M, K, N, &a, cublasdeviceA, N,
+              cublasdeviceB, K, &b, cublasdeviceC, M);
+  iElaps = seconds();
+  printf("matMult_cublas Time elapsed %f sec\n", iElaps - iStart);
+
+  cublasGetVector(elemNum, sizeof(float), cublasdeviceC, 1, cublasRef, 1);
+
+  cudaFree(cublasdeviceA);
+  cudaFree(cublasdeviceB);
+  cudaFree(cublasdeviceC);
+}
 
 int main(int argc, char **argv) {
   float *hostA;
@@ -79,9 +111,10 @@ int main(int argc, char **argv) {
   float *hostC;
   float *hostRef;
   float *gpuRef;
+  float *cublasRef;
 
-  int nx = 5;
-  int ny = 5;
+  int nx = 12800;
+  int ny = 12800;
   int elemNum = nx * ny;
 
   // 给主机上的三个矩阵分配内存
@@ -90,6 +123,7 @@ int main(int argc, char **argv) {
   hostC = (float *)malloc(elemNum * sizeof(float));
   hostRef = (float *)malloc(elemNum * sizeof(float));
   gpuRef = (float *)malloc(elemNum * sizeof(float));
+  cublasRef = (float *)malloc(elemNum * sizeof(float));
 
   // 主机上的三个矩阵初始化数据
   initialData(hostA, elemNum);
@@ -97,6 +131,7 @@ int main(int argc, char **argv) {
   initialData(hostC, elemNum);
   memset(hostRef, 0, elemNum * sizeof(float));
   memset(gpuRef, 0, elemNum * sizeof(float));
+  memset(cublasRef, 0, elemNum * sizeof(float));
 
   // 测试主机上的三个矩阵是否已经被初始化数据
   // printMatrix(hostA, elemNum, nx, ny);
@@ -166,6 +201,12 @@ int main(int argc, char **argv) {
     getchar();
     return EXIT_FAILURE;
   }
+  // iStart = seconds();
+  matMult_cublas(nx, nx, nx, alpha, hostA, hostB, beta, hostC, cuHandle,
+                 cublasRef, elemNum);
+  checkResult(hostRef, cublasRef, elemNum);
+  // iElaps = seconds();
+  // printf("matMult_cublas Time elapsed %f sec\n", iElaps - iStart);
 
   // 善后
 
