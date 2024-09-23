@@ -12,8 +12,9 @@ void CGemmWithC::solveProblem(int M, int N, int K, float alpha, float *A, float 
                                 // 
 				sum += A[i * N + k] * B[k * N + j];
                         }
-			C[i * N + j] = sum * alpha + beta * C[i * N + j];
-                        hostRef[i * N + j] = C[i *N + j];
+			// C[i * N + j] = sum * alpha + beta * C[i * N + j];
+                        // hostRef[i * N + j] = C[i *N + j];
+                        hostRef[i * N + j] = sum * alpha + beta * C[i * N + j];
                 }
         }
         std::cout << std::endl;

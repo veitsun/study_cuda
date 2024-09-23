@@ -15,7 +15,8 @@ add_multiple_executables(
     MatrixMul
 )
 add_library(CGemmWithC STATIC CGemmWithC.cpp)
-target_link_libraries(MatrixMul PRIVATE CGemmWithC)
+target_link_libraries(MatrixMul PRIVATE CGemmWithC ${CUBLAS_LIBRARY})
+
 
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cpp )
 # # AUX_SOURCE_DIRECTORY(${PROJECT_SOURCE_DIR}/src/*.cu HELLOlib_src)

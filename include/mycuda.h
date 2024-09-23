@@ -5,5 +5,6 @@
 #include <cuda_runtime.h>
 #include <iostream>
 #include <stdio.h>
+#include <cuda.h>
 
 #endif

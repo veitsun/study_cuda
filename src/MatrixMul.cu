@@ -1,8 +1,11 @@
 #include "../include/CGemmWithC.h"
 #include "../include/common.h"
-#include "../include/mycuda.h"
+// #include "../include/mycuda.h"
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
+#include <cublas_v2.h>
+#include <iostream>
 
 using namespace std;
 
@@ -15,7 +18,7 @@ void checkResult(float *hostRef, float *gpuRef, const int N) {
       match = 0;
       printf("Arrays do not match!\n");
       printf("%d\n", i);
-      printf("host %5.2f gpu %5.2f at current %d\n", hostRef[i], gpuRef[i], i);
+      printf("host %5.7f gpu %5.7f at current %d\n", hostRef[i], gpuRef[i], i);
       break;
     }
   }
@@ -66,6 +69,10 @@ __global__ void MulMatrixOnDevice(int M, int N, int K, float alpha, float *A,
   }
 }
 
+// ---------------------------------------------------------------------------cublas
+void matMult_cublas(int M, int N, int K, float alpha, float *A, float *B,
+                    float beta, float *C) {}
+
 int main(int argc, char **argv) {
   float *hostA;
   float *hostB;
@@ -73,8 +80,8 @@ int main(int argc, char **argv) {
   float *hostRef;
   float *gpuRef;
 
-  int nx = 1280;
-  int ny = 1280;
+  int nx = 5;
+  int ny = 5;
   int elemNum = nx * ny;
 
   // 给主机上的三个矩阵分配内存
@@ -97,7 +104,7 @@ int main(int argc, char **argv) {
   // printMatrix(hostC, elemNum, nx, ny);
 
   double iStart, iElaps;
-
+  // -----------------------------------------------------------------------------------------
   // 在主机上执行矩阵乘法
   CGemmWithC girl;
   float alpha = 1.0;
@@ -107,7 +114,11 @@ int main(int argc, char **argv) {
   iElaps = seconds();
   // girl.print(hostRef, elemNum); // 测试输出hostdef
   printf("MulMatrixOnHost Time elapsed %f sec\n", iElaps - iStart);
-
+  // printMatrix(hostA, elemNum, nx, ny);
+  // printMatrix(hostB, elemNum, nx, ny);
+  // printMatrix(hostC, elemNum, nx, ny);
+  // printMatrix(hostRef, elemNum, nx, ny);
+  // -----------------------------------------------------------------------------------------
   // 使用cuda kernel 来执行矩阵乘法
   dim3 blockDim(elemNum / 8, elemNum / 8);
   dim3 gridDim(8, 8);
@@ -140,6 +151,39 @@ int main(int argc, char **argv) {
   // girl.print(gpuRef, elemNum);
   checkResult(hostRef, gpuRef, elemNum);
   CHECK(cudaDeviceSynchronize());
+  // -----------------------------------------------------------------------------------------
   // 使用cublas 执行矩阵乘法
+
+  // 创建并初始化cublas对象
+  // 若是cublas对象在主函数中初始化，cublas方法在其他函数中调用，需要将cuHandle传入该函数，并在函数内创建status对象
+  cublasHandle_t cuHandle;
+  cublasStatus_t status = cublasCreate(&cuHandle);
+
+  if (status != CUBLAS_STATUS_SUCCESS) {
+    if (status == CUBLAS_STATUS_NOT_INITIALIZED) {
+      cout << "cublas 对象实例化出错" << endl;
+    }
+    getchar();
+    return EXIT_FAILURE;
+  }
+
+  // 善后
+
+  // printMatrix(hostA, elemNum, nx, ny);
+  // printMatrix(hostB, elemNum, nx, ny);
+  // printMatrix(hostC, elemNum, nx, ny);
+  // printMatrix(hostRef, elemNum, nx, ny);
+  // printMatrix(gpuRef, elemNum, nx, ny);
+
+  CHECK(cudaFree(deviceA));
+  CHECK(cudaFree(deviceB));
+  CHECK(cudaFree(deviceC));
+  cublasDestroy(cuHandle);
+  free(hostA);
+  free(hostB);
+  free(hostC);
+  free(hostRef);
+  free(gpuRef);
+
   return 0;
 }
